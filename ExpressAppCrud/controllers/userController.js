@@ -1,18 +1,18 @@
 import { User } from "../models/userModel.js";
 import { ulid } from "ulid";
 import bcryptjs from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "../config.js";
-const { compareSync, hashSync } = bcryptjs;
+
+const { hashSync } = bcryptjs;
 
 async function createUser(req, res) {
   try {
     const { username, email, password } = req.body;
-    console.log(req.body);
+    // Check if the user email exists
     const existingUserEmail = await User.findOne({ email });
     if (existingUserEmail) {
       return res.status(400).json({ message: "User email already exists" });
     }
+    // Check if the user username is already exists 
     const existingUserName = await User.findOne({ username });
     if (existingUserName) {
       return res.status(400).json({ message: "username already exists" });
@@ -20,13 +20,14 @@ async function createUser(req, res) {
 
     // Hash the password
     const hashedPassword = hashSync(password, 10);
-
+    
     const body = {
       userID: ulid(),
       username: username,
       email: email,
       password: hashedPassword,
     };
+    // Create user
     await User.create(body);
     res.status(200).json({ message: "User registered successfully" });
   } catch (error) {
@@ -35,40 +36,9 @@ async function createUser(req, res) {
   }
 }
 
-async function login(req, res) {
-  try {
-    const { email, password } = req.body;
-    // Find the user by email
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // Verify the password
-    const isPasswordValid = compareSync(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // Generate a JWT token
-    const token = jwt.sign(
-      { userID: user.userID, email: user.email },
-      JWT_SECRET,
-      {
-        expiresIn: "9h",
-      }
-    );
-
-    res.json({ token });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-}
-
 async function getAllUser(req, res) {
   try {
-    console.log(req);
+    // Find all user
     const users = await User.find();
     if (!users.length)
       return res.status(404).json({ message: "No user found" });
@@ -77,12 +47,11 @@ async function getAllUser(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
+
 async function getUser(req, res) {
   try {
-    console.log(req);
-    console.log({userID: req.params.id});
+    // Find userwith userID
     const users = await User.findOne({userID: req.params.id});
-    console.log(users);
     if (!users)
       return res.status(404).json({ message: "No user found" });
     res.json(users);
@@ -93,18 +62,19 @@ async function getUser(req, res) {
 
 async function updateUser(req, res) {
   try {
-    const { username, email, password } = req.body;
-    const hashedPassword = hashSync(password, 10);
-    console.log(req.user);
-    await User.findOneAndUpdate(
-      { userID: req.user.userID },
+    // check login user updating their user credentials
+    if(req.params.id !== req.user.userID) return res.status(401).json({ message: "Unauthorized" });
+    //finding the user with userID and updating the credentials
+    const updateUser = await User.findOneAndUpdate(
+      { userID: req.params.id },
       {
-        userID: req.user.userID,
-        username,
-        email,
-        password: hashedPassword,
+        ...(req.body.username? {username:req.body.username} : {}),
+        ...(req.body.email? {email:req.body.email} : {}),
+        ...(req.body.password? {password:hashSync(req.body.password, 10)} : {}),
       }
     );
+    //check if user exists or not
+    if(!updateUser) return res.status(404).json({ message:"User not found"})
     res.json({ message: "User updated successfully" });
   } catch (error) {
     console.error(error);
@@ -114,6 +84,9 @@ async function updateUser(req, res) {
 
 async function deleteUser(req, res) {
   try {
+    // check login user updating their user credentials
+    if(req.params.id !== req.user.userID) return res.status(401).json({ message: "Unauthorized" });
+    //finding the user with userID and deleting user credentials
     await User.findOneAndDelete({ userID: req.user.userID });
     res.json({ message: "User deleted successfully" });
   } catch (error) {
@@ -125,9 +98,11 @@ async function deleteUser(req, res) {
 
 async function getUserWithService(req, res) {
 try {
+  // Finding user detail with the username
   const user = await User.findOne({ username:req.params.id });
+  // error if not found
   if(!user) return res.status(404).json({ message: "user not found" });
-
+  //if user found then finding user subscription detail and join with user data
   const userDetail = await User.aggregate([
     {
       $match: {
@@ -145,18 +120,19 @@ try {
   ])
 
   if(!userDetail) res.status(404).json({ message: "No details found" })
+  //creating data to show if userdetail with subscription is found
   const [data] = userDetail
   const { username,email,subscriptions } = data;
-  const d = `username: ${username}, email: ${email},${subscriptions.map(({serviceLink,serviceName,monthlyFee},i)=> {return ` 
+  const details = `username: ${username}, email: ${email},${subscriptions.map(({serviceLink,serviceName,monthlyFee},i)=> {return ` 
 Subscriptions ${i+1} :-
 service Name: ${serviceName},
 service Link: ${serviceLink},
 monthly Fee: ${monthlyFee}`})}`
 
-  res.json({message:d})
+  res.json({message:details})
 } catch (error) {
   console.error(error);
   res.status(500).json({ message: "Internal Server error"})
 }
 }
-export { createUser, login, getAllUser, updateUser, deleteUser, getUser, getUserWithService };
+export { createUser, getAllUser, updateUser, deleteUser, getUser, getUserWithService };

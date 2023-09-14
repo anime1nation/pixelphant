@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-
+//schema for subscription
 const subs = new mongoose.Schema({
     serviceID:{type:String,unique:true},
     serviceName:String,
