@@ -108,10 +108,10 @@ async function createSubsByDiscord(req, res) {
     const { username, serviceLink, serviceName, monthlyFee } = req.body;
     // check if authenticated user exist or not if not response user to register first 
     const user = await User.findOne({ username });
-    if (!user)
-      res.status(404).json({
+    if (!user){
+      return res.status(404).json({
         message: `${username} not registered, register user by using prompt /ppcreateuser`,
-      });
+      })}
       // if user exist create subscription
     const body = {
       serviceID: ulid(),
