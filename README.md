@@ -6,6 +6,10 @@ CRUD operation on all
 to run the app 
 cd ExpressAppCrud
 
+install the node modules 
+
+npm install
+
 run 
 npm run dev
 
