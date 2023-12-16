@@ -7,7 +7,7 @@ const { compareSync } = bcryptjs;
 
 const authenticateToken = (req, res, next) => {
     const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access denied' });
+    if (!token) return res.status(400).json({ message: 'Access denied',status:'400' });
   
     jwt.verify(token, JWT_SECRET, (err, user) => {
       if (err) return res.status(403).json({ message: 'Invalid token' });
@@ -36,7 +36,7 @@ const authenticateToken = (req, res, next) => {
         { userID: user.userID, email: user.email },
         JWT_SECRET,
         {
-          expiresIn: "1h",
+          expiresIn: "1m",
         }
       );
         // Response JWT token

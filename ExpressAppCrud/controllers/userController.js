@@ -12,6 +12,9 @@ async function createUser(req, res) {
     if (existingUserEmail) {
       return res.status(400).json({ message: "User email already exists" });
     }
+    if(!username || !email || !password) {
+      return res.status(400).json({message:""})
+    }
     // Check if the user username is already exists 
     const existingUserName = await User.findOne({ username });
     if (existingUserName) {
@@ -124,7 +127,7 @@ try {
   const [data] = userDetail
   const { username,email,subscriptions } = data;
   const details = `username: ${username}, email: ${email},${subscriptions.map(({serviceLink,serviceName,monthlyFee},i)=> {return ` 
-Subscriptions ${i+1} :-
+Service  ${i+1} :-
 service Name: ${serviceName},
 service Link: ${serviceLink},
 monthly Fee: ${monthlyFee}`})}`
